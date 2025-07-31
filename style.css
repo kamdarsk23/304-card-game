@@ -1,0 +1,466 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #2d5a27, #4a7c59);
+    color: white;
+    min-height: 100vh;
+}
+
+.screen {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Login Screen */
+#loginScreen {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+#loginScreen h1 {
+    font-size: 3rem;
+    margin-bottom: 2rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.login-container h2 {
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
+}
+
+.player-btn {
+    display: block;
+    margin: 1rem auto;
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    background: #8B4513;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    min-width: 200px;
+}
+
+.player-btn:hover {
+    background: #A0522D;
+    transform: translateY(-2px);
+}
+
+/* Game Screen */
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.player-info {
+    font-size: 1.1rem;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.scores {
+    display: flex;
+    gap: 20px;
+    font-weight: bold;
+}
+
+.reset-btn {
+    padding: 8px 16px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+}
+
+.reset-btn:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+}
+
+/* Player Confirmation */
+.player-confirmation {
+    text-align: center;
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+}
+
+.confirm-btn {
+    padding: 15px 30px;
+    background: #ffd700;
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 0 10px;
+    transition: all 0.3s;
+}
+
+.confirm-btn:hover {
+    background: #ffed4e;
+    transform: translateY(-2px);
+}
+
+.end-turn-btn {
+    padding: 15px 30px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 0 10px;
+    transition: all 0.3s;
+}
+
+.end-turn-btn:hover {
+    background: #218838;
+    transform: translateY(-2px);
+}
+
+/* Name Entry */
+#nameEntry input:focus {
+    outline: none;
+    box-shadow: 0 0 10px #ffd700;
+}
+
+#nameEntry button:hover {
+    background: #218838 !important;
+    transform: translateY(-1px);
+}
+
+/* Turn Screen */
+#turnScreen h1 {
+    color: #ffd700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    margin-bottom: 20px;
+}
+
+#enterTurnBtn:hover {
+    background: #ffed4e !important;
+    transform: translateY(-2px);
+}
+
+/* Ready Screen */
+#readyScreen h1 {
+    color: #ffd700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    margin-bottom: 30px;
+}
+
+#readyScreen button:hover {
+    background: #218838 !important;
+    transform: translateY(-2px);
+}
+
+/* Game Layout */
+.game-layout {
+    display: flex;
+    height: 100vh;
+    gap: 20px;
+}
+
+.chat-panel {
+    width: 40%;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.chat-header {
+    text-align: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.3);
+    padding-bottom: 10px;
+}
+
+.chat-header h3 {
+    margin: 0;
+    color: #ffd700;
+}
+
+.game-panel {
+    width: 60%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Game Area */
+.game-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.bidding-area, .trump-selection {
+    background: rgba(0,0,0,0.3);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.bid-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+#bidInput {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    width: 120px;
+}
+
+#bidBtn, #passBtn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+#bidBtn {
+    background: #28a745;
+    color: white;
+}
+
+#passBtn {
+    background: #dc3545;
+    color: white;
+}
+
+#bidBtn:hover, #passBtn:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+}
+
+.current-bid {
+    font-size: 1.1rem;
+    margin-top: 15px;
+}
+
+/* Trump Selection */
+.suit-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.suit-btn {
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
+    border: 2px solid white;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.suit-btn:nth-child(1), .suit-btn:nth-child(2) {
+    background: white;
+    color: red;
+}
+
+.suit-btn:nth-child(3), .suit-btn:nth-child(4) {
+    background: white;
+    color: black;
+}
+
+.suit-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Trick Area */
+.trick-area {
+    text-align: center;
+}
+
+.played-cards {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.card-slot {
+    width: 90px;
+    height: 130px;
+    border: 2px dashed rgba(255,255,255,0.5);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.2);
+}
+
+.trump-display {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin: 15px 0;
+}
+
+/* Player Hand */
+.player-hand {
+    background: rgba(0,0,0,0.3);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.hand-cards {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.card {
+    width: 80px;
+    height: 120px;
+    background: white;
+    border: 2px solid #333;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.card:hover {
+    transform: translateY(-10px);
+}
+
+.card.playable {
+    box-shadow: 0 0 10px #ffd700;
+}
+
+.card.hearts, .card.diamonds {
+    color: red;
+}
+
+.card.clubs, .card.spades {
+    color: black;
+}
+
+.card .value {
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+
+.card .suit {
+    font-size: 1.5rem;
+}
+
+/* Game Log */
+.game-log {
+    flex: 1;
+    background: rgba(0,0,0,0.5);
+    padding: 15px;
+    border-radius: 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+#gameLog {
+    font-size: 1rem;
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.log-entry {
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 5px;
+    border-left: 3px solid #ffd700;
+    margin-bottom: 5px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .game-layout {
+        flex-direction: column;
+        height: auto;
+    }
+    
+    .chat-panel {
+        width: 100%;
+        height: 200px;
+        order: 2;
+    }
+    
+    .game-panel {
+        width: 100%;
+        order: 1;
+    }
+    
+    .hand-cards {
+        gap: 5px;
+    }
+    
+    .card {
+        width: 65px;
+        height: 95px;
+        font-size: 0.9rem;
+    }
+    
+    .card .value {
+        font-size: 1.1rem;
+    }
+    
+    .card .suit {
+        font-size: 1.3rem;
+    }
+    
+    .played-cards {
+        gap: 10px;
+    }
+    
+    .card-slot {
+        width: 75px;
+        height: 110px;
+    }
+}

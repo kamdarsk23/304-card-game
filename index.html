@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>304 Card Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="loginScreen" class="screen">
+        <h1>304 Card Game</h1>
+        <div class="login-container">
+            <h2>Select Your Player</h2>
+            <button onclick="selectPlayer(1)" class="player-btn">Player 1</button>
+            <button onclick="selectPlayer(2)" class="player-btn">Player 2</button>
+            <button onclick="selectPlayer(3)" class="player-btn">Player 3</button>
+        </div>
+    </div>
+
+    <div id="gameScreen" class="screen hidden">
+        <div class="game-header">
+            <div class="player-info">
+                <span id="currentPlayer">Player 1</span>
+                <span id="gamePhase">Waiting for players...</span>
+            </div>
+            <div class="header-controls">
+                <div class="scores">
+                    <div>P1: <span id="score1">0</span></div>
+                    <div>P2: <span id="score2">0</span></div>
+                    <div>P3: <span id="score3">0</span></div>
+                </div>
+                <button onclick="resetGame()" class="reset-btn">New Game</button>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <div class="bidding-area hidden" id="biddingArea">
+                <h3>Bidding Phase</h3>
+                <div class="bid-controls">
+                    <input type="number" id="bidInput" min="0" max="304" placeholder="Enter bid">
+                    <button onclick="placeBid()" id="bidBtn">Place Bid</button>
+                    <button onclick="pass()" id="passBtn">Pass</button>
+                </div>
+                <div class="current-bid">
+                    Current bid: <span id="currentBid">0</span> by <span id="currentBidder">None</span>
+                </div>
+                <div class="turn-indicator">
+                    <span id="turnIndicator">Waiting for game to start...</span>
+                </div>
+            </div>
+
+            <div class="trump-selection hidden" id="trumpSelection">
+                <h3>Select Trump Suit</h3>
+                <div class="suit-buttons">
+                    <button onclick="selectTrump('hearts')" class="suit-btn">♥</button>
+                    <button onclick="selectTrump('diamonds')" class="suit-btn">♦</button>
+                    <button onclick="selectTrump('clubs')" class="suit-btn">♣</button>
+                    <button onclick="selectTrump('spades')" class="suit-btn">♠</button>
+                </div>
+            </div>
+
+            <div class="trick-area">
+                <div class="played-cards" id="playedCards">
+                    <div class="card-slot" id="slot1"></div>
+                    <div class="card-slot" id="slot2"></div>
+                    <div class="card-slot" id="slot3"></div>
+                </div>
+                <div class="trump-display">
+                    Trump: <span id="trumpSuit">None</span>
+                </div>
+            </div>
+
+            <div class="player-hand">
+                <h3>Your Hand</h3>
+                <div id="hand" class="hand-cards"></div>
+            </div>
+        </div>
+
+        <div class="game-log">
+            <div id="gameLog"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
