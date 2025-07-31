@@ -1,17 +1,19 @@
 class Game304 {
     constructor() {
-        this.currentPlayer = null;
-        this.gameState = 'login'; // login, dealing, bidding, trump, playing, finished
         this.players = {
-            1: { hand: [], score: 0, bid: null, tricks: 0 },
-            2: { hand: [], score: 0, bid: null, tricks: 0 },
-            3: { hand: [], score: 0, bid: null, tricks: 0 }
+            1: { name: '', hand: [], score: 0, bid: null, tricks: 0, roundPoints: 0, canDeclare: false, declarations: [] },
+            2: { name: '', hand: [], score: 0, bid: null, tricks: 0, roundPoints: 0, canDeclare: false, declarations: [] },
+            3: { name: '', hand: [], score: 0, bid: null, tricks: 0, roundPoints: 0, canDeclare: false, declarations: [] }
         };
+        this.currentPlayer = 1;
+        this.gameState = 'naming'; // naming, bidding, trump, playing, finished
         this.deck = [];
         this.currentBid = 0;
         this.currentBidder = null;
-        this.biddingOrder = [];
+        this.biddingOrder = [1, 2, 3];
         this.currentBiddingIndex = 0;
+        this.passedPlayers = new Set(); // Track who has passed
+        this.activeBidders = [1, 2, 3]; // Players still in bidding
         this.trumpSuit = null;
         this.speakingPlayer = null;
         this.dealer = 1;
@@ -19,6 +21,7 @@ class Game304 {
         this.trickSuit = null;
         this.currentPlayerTurn = null;
         this.tricksPlayed = 0;
+        this.bidTarget = 0; // Adjusted bid target after declarations
         
         this.cardValues = {
             '9': 20, '10': 10, 'J': 30, 'Q': 2, 'K': 3, 'A': 11
@@ -28,7 +31,6 @@ class Game304 {
         this.ranks = ['9', '10', 'J', 'Q', 'K', 'A'];
         
         this.initializeDeck();
-        this.loadGameState();
     }
 
     initializeDeck() {
@@ -52,61 +54,13 @@ class Game304 {
         }
     }
 
-    saveGameState() {
-        const state = {
-            players: this.players,
-            gameState: this.gameState,
-            currentBid: this.currentBid,
-            currentBidder: this.currentBidder,
-            biddingOrder: this.biddingOrder,
-            currentBiddingIndex: this.currentBiddingIndex,
-            trumpSuit: this.trumpSuit,
-            speakingPlayer: this.speakingPlayer,
-            dealer: this.dealer,
-            currentTrick: this.currentTrick,
-            trickSuit: this.trickSuit,
-            currentPlayerTurn: this.currentPlayerTurn,
-            tricksPlayed: this.tricksPlayed
-        };
-        localStorage.setItem('game304State', JSON.stringify(state));
-    }
-
-    loadGameState() {
-        const saved = localStorage.getItem('game304State');
-        if (saved) {
-            try {
-                const state = JSON.parse(saved);
-                this.players = state.players || this.players;
-                this.gameState = state.gameState || 'login';
-                this.currentBid = state.currentBid || 0;
-                this.currentBidder = state.currentBidder || null;
-                this.biddingOrder = state.biddingOrder || [];
-                this.currentBiddingIndex = state.currentBiddingIndex || 0;
-                this.trumpSuit = state.trumpSuit || null;
-                this.speakingPlayer = state.speakingPlayer || null;
-                this.dealer = state.dealer || 1;
-                this.currentTrick = state.currentTrick || [];
-                this.trickSuit = state.trickSuit || null;
-                this.currentPlayerTurn = state.currentPlayerTurn || null;
-                this.tricksPlayed = state.tricksPlayed || 0;
-                console.log('Loaded saved game state');
-            } catch (e) {
-                console.log('Error loading saved state, starting fresh');
-                localStorage.removeItem('game304State');
-            }
-        } else {
-            console.log('No saved state found, starting fresh');
-        }
-    }
-
     dealInitialCards() {
         this.shuffleDeck();
         let deckIndex = 0;
         
-        // Deal 4 cards to each player starting from dealer's left
+        // Deal 4 cards to each player
         for (let round = 0; round < 4; round++) {
-            for (let playerOffset = 1; playerOffset <= 3; playerOffset++) {
-                const playerId = ((this.dealer + playerOffset - 1) % 3) + 1;
+            for (let playerId = 1; playerId <= 3; playerId++) {
                 this.players[playerId].hand.push(this.deck[deckIndex++]);
             }
         }
@@ -120,35 +74,22 @@ class Game304 {
         
         // Deal remaining 4 cards to each player
         for (let round = 0; round < 4; round++) {
-            for (let playerOffset = 1; playerOffset <= 3; playerOffset++) {
-                const playerId = ((this.dealer + playerOffset - 1) % 3) + 1;
+            for (let playerId = 1; playerId <= 3; playerId++) {
                 this.players[playerId].hand.push(this.remainingDeck[deckIndex++]);
             }
         }
     }
 
     startBidding() {
-        // Find player with lowest score to be the dealer
-        let lowestScore = Math.min(...Object.values(this.players).map(p => p.score));
-        let dealerPlayer = Object.keys(this.players).find(id => 
-            this.players[id].score === lowestScore
-        );
-        
-        this.dealer = parseInt(dealerPlayer);
-        this.biddingOrder = [];
-        
-        // Set bidding order starting from dealer's left (dealer goes last)
-        for (let i = 1; i <= 3; i++) {
-            this.biddingOrder.push(((this.dealer + i - 1) % 3) + 1);
-        }
-        
         this.currentBiddingIndex = 0;
         this.currentBid = 0;
         this.currentBidder = null;
+        this.passedPlayers = new Set();
+        this.activeBidders = [1, 2, 3];
         this.gameState = 'bidding';
+        this.currentPlayer = this.biddingOrder[0];
         
-        console.log(`Dealer: Player ${this.dealer}`);
-        console.log(`Bidding order: ${this.biddingOrder.join(', ')}`);
+        logMessage(`Bidding starts with ${this.players[this.currentPlayer].name}`);
     }
 
     getCardPower(card, trumpSuit, trickSuit) {
@@ -158,46 +99,122 @@ class Game304 {
     }
 
     isValidPlay(card, playerHand, trickSuit, trumpSuit) {
-        if (!trickSuit) return true; // First card of trick
+        if (!trickSuit) return true;
         
-        // Must follow suit if possible
         const hasTrickSuit = playerHand.some(c => c.suit === trickSuit);
         if (hasTrickSuit && card.suit !== trickSuit) {
-            // Can only play trump if no trick suit
             return card.suit === trumpSuit;
         }
         
         return true;
     }
+
+    findKingQueenPairs(playerHand, playerId) {
+        const pairs = [];
+        const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
+        const playerDeclarations = this.players[playerId].declarations;
+        
+        for (let suit of suits) {
+            // Check if this player has already declared this suit
+            const alreadyDeclared = playerDeclarations.some(d => d.suit === suit);
+            if (alreadyDeclared) continue;
+            
+            const hasKing = playerHand.some(c => c.rank === 'K' && c.suit === suit);
+            const hasQueen = playerHand.some(c => c.rank === 'Q' && c.suit === suit);
+            
+            if (hasKing && hasQueen) {
+                pairs.push({
+                    suit: suit,
+                    value: suit === this.trumpSuit ? 40 : 20
+                });
+            }
+        }
+        
+        return pairs;
+    }
+
+    sortHand(hand) {
+        // Define suit order: spades, hearts, diamonds, clubs
+        const suitOrder = { 'spades': 0, 'hearts': 1, 'diamonds': 2, 'clubs': 3 };
+        // Define rank order: Q, K, 10, A, 9, J
+        const rankOrder = { 'Q': 0, 'K': 1, '10': 2, 'A': 3, '9': 4, 'J': 5 };
+        
+        return hand.sort((a, b) => {
+            // First sort by suit
+            const suitDiff = suitOrder[a.suit] - suitOrder[b.suit];
+            if (suitDiff !== 0) return suitDiff;
+            
+            // Then sort by rank within the same suit
+            return rankOrder[a.rank] - rankOrder[b.rank];
+        });
+    }
 }
 
 let game = new Game304();
 
-function selectPlayer(playerId) {
-    game.currentPlayer = playerId;
-    document.getElementById('currentPlayer').textContent = `Player ${playerId}`;
+// Name entry functions
+function setPlayerName() {
+    const input = document.getElementById('playerNameInput');
+    const name = input.value.trim();
     
-    if (game.gameState === 'login') {
-        document.getElementById('loginScreen').classList.add('hidden');
-        document.getElementById('gameScreen').classList.remove('hidden');
-        
-        // Check if we should start a new game or continue
-        if (Object.values(game.players).every(p => p.hand.length === 0)) {
-            startNewRound();
-        } else {
-            updateGameDisplay();
-        }
+    if (!name) {
+        alert('Please enter a name');
+        return;
+    }
+    
+    game.players[game.currentPlayer].name = name;
+    logMessage(`${name} joined as Player ${game.currentPlayer}`);
+    
+    input.value = '';
+    
+    if (game.currentPlayer < 3) {
+        game.currentPlayer++;
+        updateNameEntry();
     } else {
-        updateGameDisplay();
+        finishNaming();
     }
 }
 
-function startNewRound() {
+function updateNameEntry() {
+    document.getElementById('currentPlayerName').textContent = game.currentPlayer;
+    document.getElementById('playerNameInput').placeholder = `Enter name for Player ${game.currentPlayer}`;
+    
+    let enteredNames = '';
+    for (let i = 1; i <= 3; i++) {
+        if (game.players[i].name) {
+            enteredNames += `Player ${i}: ${game.players[i].name}\n`;
+        }
+    }
+    document.getElementById('enteredNames').textContent = enteredNames;
+}
+
+function finishNaming() {
+    game.currentPlayer = 1;
+    
+    // Show final player list
+    let playerList = '';
+    for (let i = 1; i <= 3; i++) {
+        playerList += `Player ${i}: ${game.players[i].name}\n`;
+    }
+    document.getElementById('finalPlayerList').textContent = playerList;
+    
+    // Switch to ready screen
+    document.getElementById('nameEntry').classList.add('hidden');
+    document.getElementById('readyScreen').classList.remove('hidden');
+    
+    logMessage("All players ready!");
+}
+
+// Game functions
+function dealCardsAndStart() {
     // Reset for new round
     Object.values(game.players).forEach(p => {
         p.hand = [];
         p.bid = null;
         p.tricks = 0;
+        p.roundPoints = 0;
+        p.canDeclare = false;
+        p.declarations = [];
     });
     
     game.currentTrick = [];
@@ -207,100 +224,107 @@ function startNewRound() {
     game.currentBid = 0;
     game.currentBidder = null;
     game.currentBiddingIndex = 0;
-    game.biddingOrder = [];
     game.speakingPlayer = null;
     game.currentPlayerTurn = null;
+    game.passedPlayers = new Set();
+    game.activeBidders = [1, 2, 3];
+    game.bidTarget = 0;
     
     game.dealInitialCards();
     game.startBidding();
-    updateGameDisplay();
-    logMessage("New round started! Initial cards dealt.");
-    logMessage(`Dealer is Player ${game.dealer}. Bidding starts with Player ${game.biddingOrder[0]}.`);
+    
+    // Show turn screen
+    showTurnScreen();
+    
+    logMessage("Cards dealt! Bidding phase begins.");
 }
 
-function resetGame() {
-    localStorage.removeItem('game304State');
-    Object.values(game.players).forEach(p => {
-        p.hand = [];
-        p.score = 0;
-        p.bid = null;
-        p.tricks = 0;
-    });
-    game.dealer = 1;
-    startNewRound();
+function showTurnScreen() {
+    // Hide all other screens
+    document.getElementById('readyScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.add('hidden');
+    
+    // Show turn screen
+    const playerName = game.players[game.currentPlayer].name;
+    document.getElementById('currentTurnPlayer').textContent = `${playerName}'s Turn`;
+    document.getElementById('confirmPlayerName').textContent = playerName;
+    document.getElementById('turnScreen').classList.remove('hidden');
 }
 
-function updateGameDisplay() {
-    // Update scores
+function enterTurn() {
+    // Switch to game screen
+    document.getElementById('turnScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+    
+    updateDisplay();
+}
+
+function updateDisplay() {
+    // Update scores and round points
     document.getElementById('score1').textContent = game.players[1].score;
     document.getElementById('score2').textContent = game.players[2].score;
     document.getElementById('score3').textContent = game.players[3].score;
+    document.getElementById('points1').textContent = game.players[1].roundPoints;
+    document.getElementById('points2').textContent = game.players[2].roundPoints;
+    document.getElementById('points3').textContent = game.players[3].roundPoints;
+    
+    // Update current player display
+    const playerName = game.players[game.currentPlayer].name || `Player ${game.currentPlayer}`;
+    document.getElementById('currentPlayer').textContent = playerName;
     
     // Update game phase
     let phaseText = '';
     switch(game.gameState) {
         case 'bidding':
-            phaseText = `Bidding - Player ${game.biddingOrder[game.currentBiddingIndex]}'s turn`;
+            phaseText = `Make your bid`;
             break;
         case 'trump':
-            phaseText = `Select Trump Suit - Player ${game.speakingPlayer}`;
+            phaseText = `Select Trump Suit`;
+            break;
+        case 'declaration':
+            phaseText = `Declare King-Queen pairs`;
             break;
         case 'playing':
-            phaseText = `Playing - Player ${game.currentPlayerTurn}'s turn`;
+            phaseText = `Play a card`;
             break;
         default:
-            phaseText = game.gameState;
+            phaseText = 'Your turn';
     }
     document.getElementById('gamePhase').textContent = phaseText;
     
-    // Show/hide UI elements based on game state
+    // Show/hide UI elements
     const biddingArea = document.getElementById('biddingArea');
     const trumpSelection = document.getElementById('trumpSelection');
+    const declarationArea = document.getElementById('declarationArea');
     
     biddingArea.classList.toggle('hidden', game.gameState !== 'bidding');
     trumpSelection.classList.toggle('hidden', game.gameState !== 'trump');
+    declarationArea.classList.toggle('hidden', game.gameState !== 'declaration');
     
     // Update bidding display
     if (game.gameState === 'bidding') {
         document.getElementById('currentBid').textContent = game.currentBid;
-        document.getElementById('currentBidder').textContent = game.currentBidder || 'None';
-        
-        const currentBiddingPlayer = game.biddingOrder[game.currentBiddingIndex];
-        const isPlayerTurn = currentBiddingPlayer === game.currentPlayer;
-        
-        document.getElementById('bidBtn').disabled = !isPlayerTurn;
-        document.getElementById('passBtn').disabled = !isPlayerTurn;
-        document.getElementById('bidInput').disabled = !isPlayerTurn;
-        
-        // Update turn indicator
-        const turnIndicator = document.getElementById('turnIndicator');
-        if (isPlayerTurn) {
-            turnIndicator.textContent = "YOUR TURN TO BID";
-            turnIndicator.style.color = "#ffd700";
-            turnIndicator.style.fontWeight = "bold";
-        } else {
-            turnIndicator.textContent = `Waiting for Player ${currentBiddingPlayer} to bid`;
-            turnIndicator.style.color = "white";
-            turnIndicator.style.fontWeight = "normal";
-        }
+        document.getElementById('currentBidder').textContent = game.currentBidder ? game.players[game.currentBidder].name : 'None';
     }
     
     // Update trump display
     document.getElementById('trumpSuit').textContent = game.trumpSuit ? getSuitSymbol(game.trumpSuit) : 'None';
     
-    // Update trump selection visibility
-    if (game.gameState === 'trump') {
-        const canSelectTrump = game.speakingPlayer === game.currentPlayer;
-        document.querySelectorAll('.suit-btn').forEach(btn => {
-            btn.disabled = !canSelectTrump;
-        });
+    // Update bid target display
+    const bidTargetDisplay = document.getElementById('bidTargetDisplay');
+    if (game.speakingPlayer && game.bidTarget > 0) {
+        bidTargetDisplay.textContent = `${game.players[game.speakingPlayer].name} needs ${game.bidTarget} points (bid: ${game.currentBid})`;
+    } else {
+        bidTargetDisplay.textContent = '';
     }
     
-    // Display player's hand
+    // Update declarations display
+    if (game.gameState === 'declaration') {
+        displayAvailableDeclarations();
+    }
+    
     displayHand();
     displayPlayedCards();
-    
-    game.saveGameState();
 }
 
 function displayHand() {
@@ -309,7 +333,15 @@ function displayHand() {
     
     const playerHand = game.players[game.currentPlayer].hand;
     
-    playerHand.forEach(card => {
+    if (playerHand.length === 0) {
+        handContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #ccc;">No cards yet</div>';
+        return;
+    }
+    
+    // Sort cards by suit and rank
+    const sortedHand = game.sortHand([...playerHand]);
+    
+    sortedHand.forEach(card => {
         const cardElement = document.createElement('div');
         cardElement.className = `card ${card.suit}`;
         cardElement.innerHTML = `
@@ -317,7 +349,7 @@ function displayHand() {
             <div class="suit">${getSuitSymbol(card.suit)}</div>
         `;
         
-        // Make card playable if it's player's turn and valid
+        // Make card playable if it's player's turn
         if (game.gameState === 'playing' && game.currentPlayerTurn === game.currentPlayer) {
             if (game.isValidPlay(card, playerHand, game.trickSuit, game.trumpSuit)) {
                 cardElement.classList.add('playable');
@@ -332,12 +364,10 @@ function displayHand() {
 function displayPlayedCards() {
     const slots = ['slot1', 'slot2', 'slot3'];
     
-    // Clear all slots
     slots.forEach(slotId => {
         document.getElementById(slotId).innerHTML = '';
     });
     
-    // Display played cards
     game.currentTrick.forEach((play, index) => {
         const slot = document.getElementById(slots[index]);
         slot.innerHTML = `
@@ -345,7 +375,7 @@ function displayPlayedCards() {
                 <div class="value">${play.card.rank}</div>
                 <div class="suit">${getSuitSymbol(play.card.suit)}</div>
             </div>
-            <div style="font-size: 0.8rem; margin-top: 5px;">P${play.player}</div>
+            <div style="font-size: 0.8rem; margin-top: 5px;">${game.players[play.player].name}</div>
         `;
     });
 }
@@ -360,11 +390,74 @@ function getSuitSymbol(suit) {
     return symbols[suit];
 }
 
-function placeBid() {
+function displayAvailableDeclarations() {
+    const container = document.getElementById('availableDeclarations');
+    const availableDeclarations = game.findKingQueenPairs(game.players[game.currentPlayer].hand, game.currentPlayer);
+    
+    container.innerHTML = '';
+    
+    if (availableDeclarations.length === 0) {
+        container.innerHTML = '<p>No King-Queen pairs available to declare.</p>';
+        return;
+    }
+    
+    availableDeclarations.forEach(decl => {
+        const declButton = document.createElement('button');
+        declButton.innerHTML = `Declare K-Q of ${getSuitSymbol(decl.suit)} (${decl.value} points)`;
+        declButton.style.cssText = `
+            padding: 10px 20px; 
+            margin: 5px; 
+            font-size: 1.1em; 
+            background: ${decl.suit === game.trumpSuit ? '#ffd700' : '#28a745'}; 
+            color: ${decl.suit === game.trumpSuit ? '#000' : 'white'}; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer;
+        `;
+        declButton.onclick = () => makeDeclaration(decl.suit);
+        container.appendChild(declButton);
+    });
+}
+
+function makeDeclaration(suit) {
+    const currentPlayer = game.currentPlayer;
+    const declarationValue = suit === game.trumpSuit ? 40 : 20;
+    
+    // Add to player's declarations
+    game.players[currentPlayer].declarations.push({ suit, value: declarationValue });
+    
+    // Adjust bid target based on whether speaker or opponent is declaring
+    if (currentPlayer === game.speakingPlayer) {
+        // Speaker declares - reduces their target
+        game.bidTarget -= declarationValue;
+        logMessage(`${game.players[currentPlayer].name} declares K-Q of ${getSuitSymbol(suit)} (-${declarationValue} points from bid target)`);
+    } else {
+        // Opponent declares - increases speaker's target
+        game.bidTarget += declarationValue;
+        logMessage(`${game.players[currentPlayer].name} declares K-Q of ${getSuitSymbol(suit)} (+${declarationValue} points to bid target)`);
+    }
+    
+    // Continue with next trick
+    game.gameState = 'playing';
+    showTurnScreen();
+}
+
+function skipDeclaration() {
+    logMessage(`${game.players[game.currentPlayer].name} skips declaration`);
+    game.gameState = 'playing';
+    showTurnScreen();
+}
+
+function endTurn() {
+    // Go back to turn screen for next player
+    showTurnScreen();
+}
+
+function makeBid() {
     const bidInput = document.getElementById('bidInput');
     const bidAmount = parseInt(bidInput.value);
     
-    if (bidAmount <= game.currentBid) {
+    if (!bidAmount || bidAmount <= game.currentBid) {
         alert('Bid must be higher than current bid');
         return;
     }
@@ -374,44 +467,60 @@ function placeBid() {
         return;
     }
     
-    const currentPlayer = game.biddingOrder[game.currentBiddingIndex];
+    const currentPlayer = game.currentPlayer;
     game.currentBid = bidAmount;
     game.currentBidder = currentPlayer;
     game.players[currentPlayer].bid = bidAmount;
     
-    logMessage(`Player ${currentPlayer} bids ${bidAmount}`);
+    // Reset passes when someone makes a new bid
+    game.passedPlayers.clear();
     
-    nextBiddingTurn();
+    logMessage(`${game.players[currentPlayer].name} bids ${bidAmount}`);
+    
     bidInput.value = '';
-    updateGameDisplay();
+    nextBiddingTurn();
 }
 
 function pass() {
-    const currentPlayer = game.biddingOrder[game.currentBiddingIndex];
-    logMessage(`Player ${currentPlayer} passes`);
+    const currentPlayer = game.currentPlayer;
+    game.passedPlayers.add(currentPlayer);
     
+    logMessage(`${game.players[currentPlayer].name} passes`);
     nextBiddingTurn();
-    updateGameDisplay();
 }
 
 function nextBiddingTurn() {
-    game.currentBiddingIndex++;
+    // Check if bidding is over (only 1 active bidder left, or all passed)
+    const activeBidders = game.activeBidders.filter(p => !game.passedPlayers.has(p));
     
-    // Check if bidding is complete (everyone has had a chance after last bid)
-    if (game.currentBiddingIndex >= game.biddingOrder.length) {
+    if (activeBidders.length <= 1) {
+        // Bidding is over
         if (game.currentBidder) {
-            // Bidding complete, speaking player selects trump
             game.speakingPlayer = game.currentBidder;
             game.gameState = 'trump';
-            logMessage(`Player ${game.speakingPlayer} won the bidding with ${game.currentBid}`);
+            game.currentPlayer = game.speakingPlayer;
+            game.bidTarget = game.currentBid; // Initialize bid target
+            logMessage(`${game.players[game.speakingPlayer].name} won the bidding with ${game.currentBid}`);
         } else {
-            // No one bid, dealer speaks
+            // All passed, dealer must speak
             game.speakingPlayer = game.dealer;
-            game.currentBid = 1; // Minimum bid
+            game.currentBid = 1;
             game.gameState = 'trump';
-            logMessage(`No bids placed. Player ${game.speakingPlayer} (dealer) must speak with minimum bid.`);
+            game.currentPlayer = game.speakingPlayer;
+            game.bidTarget = 1; // Initialize bid target
+            logMessage(`All players passed. ${game.players[game.speakingPlayer].name} (dealer) must speak.`);
         }
+        showTurnScreen();
+        return;
     }
+    
+    // Continue bidding - find next active player
+    do {
+        game.currentBiddingIndex = (game.currentBiddingIndex + 1) % game.biddingOrder.length;
+        game.currentPlayer = game.biddingOrder[game.currentBiddingIndex];
+    } while (game.passedPlayers.has(game.currentPlayer));
+    
+    showTurnScreen();
 }
 
 function selectTrump(suit) {
@@ -419,12 +528,13 @@ function selectTrump(suit) {
         game.trumpSuit = suit;
         game.dealRemainingCards();
         game.gameState = 'playing';
+        game.currentPlayer = game.speakingPlayer;
         game.currentPlayerTurn = game.speakingPlayer;
         
-        logMessage(`Player ${game.speakingPlayer} selected ${getSuitSymbol(suit)} as trump suit`);
+        logMessage(`${game.players[game.speakingPlayer].name} selected ${getSuitSymbol(suit)} as trump`);
         logMessage("Remaining cards dealt. Game begins!");
         
-        updateGameDisplay();
+        showTurnScreen();
     }
 }
 
@@ -447,21 +557,25 @@ function playCard(card) {
         game.trickSuit = card.suit;
     }
     
-    logMessage(`Player ${game.currentPlayer} plays ${card.rank}${getSuitSymbol(card.suit)}`);
+    logMessage(`${game.players[game.currentPlayer].name} plays ${card.rank}${getSuitSymbol(card.suit)}`);
     
     // Check if trick is complete
     if (game.currentTrick.length === 3) {
-        completeTrick();
+        setTimeout(() => {
+            completeTrick();
+        }, 1500);
     } else {
         // Next player's turn
-        game.currentPlayerTurn = (game.currentPlayerTurn % 3) + 1;
+        game.currentPlayer = (game.currentPlayer % 3) + 1;
+        game.currentPlayerTurn = game.currentPlayer;
+        showTurnScreen();
     }
     
-    updateGameDisplay();
+    updateDisplay();
 }
 
 function completeTrick() {
-    // Determine winner
+    // Determine winner using proper suit hierarchy
     let winningPlay = game.currentTrick[0];
     let winningPower = game.getCardPower(winningPlay.card, game.trumpSuit, game.trickSuit);
     
@@ -478,10 +592,14 @@ function completeTrick() {
     const winner = winningPlay.player;
     game.players[winner].tricks++;
     
-    logMessage(`Player ${winner} wins the trick`);
-    
-    // Calculate points for this trick
+    // Add card points to winner's total
     const trickPoints = game.currentTrick.reduce((sum, play) => sum + play.card.value, 0);
+    game.players[winner].roundPoints += trickPoints;
+    
+    logMessage(`${game.players[winner].name} wins the trick (${trickPoints} points)`);
+    
+    // Enable declaration for the winner
+    game.players[winner].canDeclare = true;
     
     // Clear trick
     game.currentTrick = [];
@@ -493,57 +611,70 @@ function completeTrick() {
         completeRound();
     } else {
         // Winner leads next trick
+        game.currentPlayer = winner;
         game.currentPlayerTurn = winner;
+        
+        // Check if winner has declarations available
+        const availableDeclarations = game.findKingQueenPairs(game.players[winner].hand, winner);
+        if (availableDeclarations.length > 0) {
+            game.gameState = 'declaration';
+            showTurnScreen();
+        } else {
+            game.gameState = 'playing';
+            showTurnScreen();
+        }
     }
+    
+    updateDisplay();
 }
 
 function completeRound() {
-    // Calculate total points for speaking player
-    let speakingPlayerPoints = 0;
-    
-    // Count all card values in tricks won by speaking player
-    Object.values(game.players).forEach(player => {
-        if (player.tricks > 0) {
-            // This is simplified - in a real game you'd need to track which cards were in which tricks
-            // For now, we'll estimate based on average card value and tricks won
-            const avgCardValue = Object.values(game.cardValues).reduce((a,b) => a+b) / Object.values(game.cardValues).length;
-            speakingPlayerPoints += player.tricks * avgCardValue * (player === game.players[game.speakingPlayer] ? 1 : 0);
-        }
-    });
-    
-    // Simplified scoring - count total card values won by speaking player
-    // In a full implementation, you'd track exactly which cards were won
     const speakingPlayer = game.players[game.speakingPlayer];
-    const tricksWon = speakingPlayer.tricks;
-    const estimatedPoints = tricksWon * 38; // Average points per trick
+    const actualPoints = speakingPlayer.roundPoints;
+    const originalBid = game.currentBid;
+    const adjustedTarget = game.bidTarget;
     
-    const bid = game.currentBid;
+    logMessage(`=== ROUND COMPLETE ===`);
+    logMessage(`${game.players[game.speakingPlayer].name} scored ${actualPoints} points`);
+    logMessage(`Original bid: ${originalBid}, Adjusted target: ${adjustedTarget}`);
     
-    if (estimatedPoints >= bid) {
+    // Show all players' points and declarations for this round
+    for (let i = 1; i <= 3; i++) {
+        if (game.players[i].roundPoints > 0 || game.players[i].declarations.length > 0) {
+            let msg = `${game.players[i].name}: ${game.players[i].roundPoints} points, ${game.players[i].tricks} tricks`;
+            if (game.players[i].declarations.length > 0) {
+                const declStr = game.players[i].declarations.map(d => `K-Q${getSuitSymbol(d.suit)}(${d.value})`).join(', ');
+                msg += `, Declarations: ${declStr}`;
+            }
+            logMessage(msg);
+        }
+    }
+    
+    // Use adjusted target for scoring
+    if (actualPoints >= adjustedTarget) {
         speakingPlayer.score += 1;
-        logMessage(`Player ${game.speakingPlayer} made their bid! +1 point`);
-    } else if (estimatedPoints < bid / 2) {
+        logMessage(`${game.players[game.speakingPlayer].name} made their adjusted target! +1 point`);
+    } else if (actualPoints < adjustedTarget / 2) {
         speakingPlayer.score -= 2;
-        logMessage(`Player ${game.speakingPlayer} scored less than half their bid! -2 points`);
+        logMessage(`${game.players[game.speakingPlayer].name} scored less than half their target! -2 points`);
     } else {
         speakingPlayer.score -= 1;
-        logMessage(`Player ${game.speakingPlayer} failed their bid! -1 point`);
+        logMessage(`${game.players[game.speakingPlayer].name} failed their target! -1 point`);
     }
     
-    // Check for game end (first to reach target score)
+    // Check for game end
     const winner = Object.keys(game.players).find(id => game.players[id].score >= 10);
     if (winner) {
-        logMessage(`Game Over! Player ${winner} wins with ${game.players[winner].score} points!`);
+        logMessage(`Game Over! ${game.players[winner].name} wins with ${game.players[winner].score} points!`);
         game.gameState = 'finished';
     } else {
-        // Start new round
         game.dealer = (game.dealer % 3) + 1;
         setTimeout(() => {
-            startNewRound();
-        }, 3000);
+            dealCardsAndStart();
+        }, 5000);
     }
     
-    updateGameDisplay();
+    updateDisplay();
 }
 
 function logMessage(message) {
@@ -555,28 +686,5 @@ function logMessage(message) {
     gameLog.scrollTop = gameLog.scrollHeight;
 }
 
-// Initialize game display
-if (game.gameState !== 'login') {
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('gameScreen').classList.remove('hidden');
-    updateGameDisplay();
-}
-
-// Add debugging for initial load
-console.log('Game initialized with state:', game.gameState);
-console.log('Current dealer:', game.dealer);
-console.log('Players hands:', Object.entries(game.players).map(([id, p]) => `P${id}: ${p.hand.length} cards`));
-
-// Auto-refresh game state every 2 seconds to sync between players
-setInterval(() => {
-    if (game.currentPlayer) {
-        const currentState = JSON.stringify(game.players) + game.gameState + game.currentBid + game.trumpSuit;
-        game.loadGameState();
-        const newState = JSON.stringify(game.players) + game.gameState + game.currentBid + game.trumpSuit;
-        
-        if (currentState !== newState) {
-            console.log('Game state updated, refreshing display');
-            updateGameDisplay();
-        }
-    }
-}, 2000);
+// Initialize - show name entry first
+updateNameEntry();
