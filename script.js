@@ -687,4 +687,6 @@ function logMessage(message) {
 }
 
 // Initialize - show name entry first
-updateNameEntry();
+document.addEventListener('DOMContentLoaded', function() {
+    updateNameEntry();
+});
